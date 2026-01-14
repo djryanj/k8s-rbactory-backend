@@ -1,4 +1,4 @@
-// backend/internal/handlers/rbac.go
+// internal/handlers/rbac.go
 package handlers
 
 import (
@@ -59,15 +59,14 @@ func (h *RBACHandler) ListRoles(w http.ResponseWriter, r *http.Request) {
 
 	// Validate namespace
 	if err := ValidateNamespace(namespace); err != nil {
-		WriteErrorResponse(w, http.StatusBadRequest, "Invalid namespace",
-			ValidationError{Field: "namespace", Message: err.Error()})
+		WriteValidationError(w, "namespace", err.Error())
 		return
 	}
 
 	// Validate pagination
 	limit, offset, err := ValidatePaginationParams(r)
 	if err != nil {
-		WriteErrorResponse(w, http.StatusBadRequest, err.Error())
+		WriteJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -82,7 +81,7 @@ func (h *RBACHandler) ListRoles(w http.ResponseWriter, r *http.Request) {
 		logging.LogError(ctx, "failed to list roles", err,
 			slog.String("namespace", namespace),
 		)
-		WriteErrorResponse(w, http.StatusInternalServerError, "Failed to list roles")
+		WriteKubernetesError(w, err)
 		return
 	}
 
@@ -107,6 +106,7 @@ func (h *RBACHandler) ListRoles(w http.ResponseWriter, r *http.Request) {
 
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		logging.LogError(ctx, "failed to encode response", err)
+		WriteJSONError(w, http.StatusInternalServerError, "Failed to encode response")
 	}
 }
 
@@ -121,14 +121,12 @@ func (h *RBACHandler) GetRole(w http.ResponseWriter, r *http.Request) {
 
 	// Validate inputs
 	if err := ValidateNamespace(namespace); err != nil {
-		WriteErrorResponse(w, http.StatusBadRequest, "Invalid namespace",
-			ValidationError{Field: "namespace", Message: err.Error()})
+		WriteValidationError(w, "namespace", err.Error())
 		return
 	}
 
 	if err := ValidateK8sName(name); err != nil {
-		WriteErrorResponse(w, http.StatusBadRequest, "Invalid name",
-			ValidationError{Field: "name", Message: err.Error()})
+		WriteValidationError(w, "name", err.Error())
 		return
 	}
 
@@ -143,22 +141,17 @@ func (h *RBACHandler) GetRole(w http.ResponseWriter, r *http.Request) {
 			slog.String("namespace", namespace),
 			slog.String("name", name),
 		)
-		WriteErrorResponse(w, http.StatusNotFound, "Role not found")
+		WriteKubernetesError(w, err)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+
 	if err := json.NewEncoder(w).Encode(role); err != nil {
 		logging.LogError(ctx, "failed to encode response", err)
+		WriteJSONError(w, http.StatusInternalServerError, "Failed to encode response")
 	}
-}
-
-// Helper function for min (Go 1.21+)
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
 }
 
 // ListClusterRoles handles GET /api/v1/clusterroles with pagination

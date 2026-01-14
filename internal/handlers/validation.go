@@ -1,4 +1,4 @@
-// backend/internal/handlers/validation.go
+// internal/handlers/validation.go
 package handlers
 
 import (
@@ -22,8 +22,11 @@ type ValidationError struct {
 
 // ErrorResponse represents an error response
 type ErrorResponse struct {
-	Error  string            `json:"error"`
-	Errors []ValidationError `json:"errors,omitempty"`
+	Error      string                 `json:"error"`
+	Message    string                 `json:"message,omitempty"`
+	StatusCode int                    `json:"statusCode"`
+	Errors     []ValidationError      `json:"errors,omitempty"`
+	Details    map[string]interface{} `json:"details,omitempty"`
 }
 
 // ValidatePaginationParams validates and returns pagination parameters
@@ -81,14 +84,16 @@ func ValidateNamespace(namespace string) error {
 	return ValidateK8sName(namespace)
 }
 
-// WriteErrorResponse writes a JSON error response
+// WriteErrorResponse writes a JSON error response (legacy - use WriteJSONError instead)
 func WriteErrorResponse(w http.ResponseWriter, statusCode int, message string, validationErrors ...ValidationError) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
 
 	response := ErrorResponse{
-		Error:  message,
-		Errors: validationErrors,
+		Error:      http.StatusText(statusCode),
+		Message:    message,
+		StatusCode: statusCode,
+		Errors:     validationErrors,
 	}
 
 	json.NewEncoder(w).Encode(response)

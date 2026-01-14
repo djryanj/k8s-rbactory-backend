@@ -1,3 +1,4 @@
+// internal/handlers/cluster.go
 package handlers
 
 import (
@@ -13,7 +14,7 @@ import (
 )
 
 type ClusterHandler struct {
-	k8sClient k8s.ClientInterface // Changed from *k8s.Client
+	k8sClient k8s.ClientInterface
 	logger    *slog.Logger
 }
 
@@ -35,21 +36,22 @@ func (h *ClusterHandler) GetClusterInfo(w http.ResponseWriter, r *http.Request) 
 	version, err := h.k8sClient.GetClusterVersion(ctx)
 	if err != nil {
 		logging.LogError(ctx, "failed to get cluster version", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		WriteKubernetesError(w, err)
 		return
 	}
 
 	namespaces, err := h.k8sClient.ListNamespaces(ctx)
 	if err != nil {
 		logging.LogError(ctx, "failed to list namespaces", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		WriteKubernetesError(w, err)
 		return
 	}
 
 	nodeCount, err := h.k8sClient.GetNodeCount(ctx)
 	if err != nil {
 		logging.LogError(ctx, "failed to get node count", err)
-		nodeCount = 0 // Don't fail the whole request
+		// Don't fail the whole request for node count
+		nodeCount = 0
 	}
 
 	info := models.ClusterInfo{
@@ -64,8 +66,11 @@ func (h *ClusterHandler) GetClusterInfo(w http.ResponseWriter, r *http.Request) 
 	)
 
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+
 	if err := json.NewEncoder(w).Encode(info); err != nil {
 		logging.LogError(ctx, "failed to encode response", err)
+		WriteInternalError(w, r, "Failed to encode response", err)
 	}
 }
 
@@ -79,7 +84,7 @@ func (h *ClusterHandler) ListNamespaces(w http.ResponseWriter, r *http.Request) 
 	namespaces, err := h.k8sClient.ListNamespaces(ctx)
 	if err != nil {
 		logging.LogError(ctx, "failed to list namespaces", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		WriteKubernetesError(w, err)
 		return
 	}
 
@@ -88,7 +93,10 @@ func (h *ClusterHandler) ListNamespaces(w http.ResponseWriter, r *http.Request) 
 	}
 
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		logging.LogError(ctx, "failed to encode response", err)
+		WriteInternalError(w, r, "Failed to encode response", err)
 	}
 }

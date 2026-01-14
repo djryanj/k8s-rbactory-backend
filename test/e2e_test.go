@@ -162,7 +162,7 @@ func setupTestServer(t *testing.T, mockClient *k8s.MockClient, logger *slog.Logg
 	api := r.PathPrefix("/api/v1").Subrouter()
 
 	// Register routes
-	api.HandleFunc("/healthz", handlers.HealthHandler).Methods(http.MethodGet)
+	api.HandleFunc("/healthz", handlers.SimpleHealthHandler).Methods(http.MethodGet)
 	api.HandleFunc("/cluster/info", clusterHandler.GetClusterInfo).Methods(http.MethodGet)
 	api.HandleFunc("/counts", rbacHandler.GetCounts).Methods(http.MethodGet)
 	api.HandleFunc("/roles", rbacHandler.ListRoles).Methods(http.MethodGet)

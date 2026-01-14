@@ -42,7 +42,7 @@ func TestHealthHandler(t *testing.T) {
 			req := httptest.NewRequest(tt.method, "/healthz", nil)
 			rr := httptest.NewRecorder()
 
-			HealthHandler(rr, req)
+			SimpleHealthHandler(rr, req)
 
 			testutil.AssertStatusCode(t, tt.expectedStatus, rr.Code)
 
@@ -72,7 +72,7 @@ func TestHealthHandler_ResponseFormat(t *testing.T) {
 	req := httptest.NewRequest("GET", "/healthz", nil)
 	rr := httptest.NewRecorder()
 
-	HealthHandler(rr, req)
+	SimpleHealthHandler(rr, req)
 
 	// Verify JSON structure
 	var response map[string]interface{}
@@ -97,6 +97,6 @@ func BenchmarkHealthHandler(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		rr := httptest.NewRecorder()
-		HealthHandler(rr, req)
+		SimpleHealthHandler(rr, req)
 	}
 }

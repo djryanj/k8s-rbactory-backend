@@ -52,7 +52,7 @@ func main() {
 	}).Methods(http.MethodGet)
 
 	// Health check
-	api.HandleFunc("/healthz", handlers.HealthHandler).Methods(http.MethodGet)
+	api.HandleFunc("/healthz", handlers.SimpleHealthHandler).Methods(http.MethodGet)
 
 	// Cluster info
 	api.HandleFunc("/cluster/info", clusterHandler.GetClusterInfo).Methods(http.MethodGet)
