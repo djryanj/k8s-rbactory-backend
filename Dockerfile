@@ -60,8 +60,8 @@ LABEL org.opencontainers.image.created="${BUILD_DATE}" \
     org.opencontainers.image.source="https://github.com/djryanj/k8s-rbactory-backend" \
     org.opencontainers.image.documentation="https://github.com/djryanj/k8s-rbactory-backend/blob/main/README.md"
 
-COPY --from=builder /app/api /api
+COPY --from=builder --chown=nonroot:nonroot /app/api /
 
 EXPOSE 8080
 
-ENTRYPOINT ["./api"]
+ENTRYPOINT ["/api"]

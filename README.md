@@ -147,7 +147,7 @@ make docker-build
 
 ```bash
 docker run -p 8080:8080 \
-  -v ~/.kube/config:/root/.kube/config:ro \
+  -v ~/.kube/config:/home/nonroot/.kube/config:ro \
   k8s-rbactory-backend:latest
 ```
 
