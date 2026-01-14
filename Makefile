@@ -9,9 +9,10 @@ GO_FILES=$(shell find . -name '*.go' -type f)
 COVERAGE_FILE=coverage.out
 COVERAGE_HTML=coverage.html
 
+
 .DEFAULT_GOAL := help
 
-help
+help:
 	@echo "Available targets:"
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
@@ -19,51 +20,51 @@ help
 # Build Targets
 # ============================================================================
 
-build
+build:
 	@echo "Building..."
 	@go build -o $(BINARY_NAME) ./cmd/api
 	@echo "Build complete: $(BINARY_NAME)"
 
-run
+run:
 	@go run ./cmd/api
 
 # ============================================================================
 # Test Targets
 # ============================================================================
 
-test
+test:
 	@echo "Running all tests..."
 	go test -v ./...
 
-test-unit
+test-unit:
 	@echo "Running unit tests..."
 	go test -v -short ./...
 
-test-integration
+test-integration:
 	@echo "Running integration tests..."
 	go test -v -run Integration ./...
 
-test-server
+test-server:
 	@echo "Running server tests..."
 	go test -v ./test/...
 
-test-handlers
+test-handlers:
 	@echo "Running handler tests..."
 	go test -v ./internal/handlers/...
 
-test-middleware
+test-middleware:
 	@echo "Running middleware tests..."
 	go test -v ./internal/middleware/...
 
-test-k8s
+test-k8s:
 	@echo "Running k8s tests..."
 	go test -v ./internal/k8s/...
 
-test-logging
+test-logging:
 	@echo "Running logging tests..."
 	go test -v ./internal/logging/...
 
-test-coverage
+test-coverage:
 	@echo "Running tests with coverage..."
 	go test -v -coverprofile=$(COVERAGE_FILE) ./...
 	go tool cover -html=$(COVERAGE_FILE) -o $(COVERAGE_HTML)
@@ -72,31 +73,31 @@ test-coverage
 	@echo "Coverage Summary:"
 	@go tool cover -func=$(COVERAGE_FILE) | grep total
 
-test-race
+test-race:
 	@echo "Running tests with race detector..."
 	go test -v -race ./...
 
-test-bench
+test-bench:
 	@echo "Running benchmarks..."
 	go test -bench=. -benchmem ./...
 
-test-fast
+test-fast:
 	@echo "Running tests (fail fast mode)..."
 	go test -v -failfast ./...
 
-test-one
+test-one:
 	@read -p "Enter test name: " test; \
 	echo "Running test: $$test"; \
 	go test -v -run $$test ./...
 
-test-watch
+test-watch:
 	@echo "Watching for changes..."
 	@echo "Press Ctrl+C to stop"
 	@find . -name '*.go' | entr -c go test -v ./...
 
 check: test-unit test-race lint
 	@echo ""
-	@echo "[SUCCESS] All checks passed!"
+	@echo "✅ All checks passed!"
 
 coverage-badge: test-coverage
 	@echo -n "Coverage: "
@@ -106,7 +107,7 @@ coverage-badge: test-coverage
 # Cleanup Targets
 # ============================================================================
 
-clean-test
+clean-test:
 	@echo "Cleaning test artifacts..."
 	rm -f $(COVERAGE_FILE) $(COVERAGE_HTML)
 	rm -f /tmp/test-api-server
@@ -122,12 +123,12 @@ clean: clean-test
 # Docker Targets
 # ============================================================================
 
-docker-build
+docker-build:
 	@echo "Building Docker image..."
 	@docker build -t $(DOCKER_IMAGE):$(DOCKER_TAG) .
 	@echo "Docker image built: $(DOCKER_IMAGE):$(DOCKER_TAG)"
 
-docker-run
+docker-run:
 	@echo "Running Docker container..."
 	@docker run -p 8080:8080 \
 		-v ~/.kube/config:/root/.kube/config:ro \
@@ -137,16 +138,16 @@ docker-run
 # Code Quality Targets
 # ============================================================================
 
-lint
+lint:
 	@echo "Running linter..."
 	@golangci-lint run ./...
 
-fmt
+fmt:
 	@echo "Formatting code..."
 	@go fmt ./...
 	@echo "Code formatted"
 
-vet
+vet:
 	@echo "Running go vet..."
 	@go vet ./...
 	@echo "Vet complete"
@@ -155,23 +156,23 @@ vet
 # Dependency Management
 # ============================================================================
 
-mod-tidy
+mod-tidy:
 	@echo "Tidying modules..."
 	@go mod tidy
 	@echo "Modules tidied"
 
-mod-download
+mod-download:
 	@echo "Downloading dependencies..."
 	@go mod download
 	@echo "Dependencies downloaded"
 
-deps: mod-download ## Alias for mod-download
+deps: mod-download
 
 # ============================================================================
 # Development Tools
 # ============================================================================
 
-install-tools
+install-tools:
 	@echo "Installing development tools..."
 	@echo "Installing golangci-lint..."
 	@go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
@@ -187,51 +188,51 @@ install-tools
 
 all: clean fmt vet lint test build
 	@echo ""
-	@echo "[SUCCESS] All tasks completed successfully!"
+	@echo "✅ All tasks completed successfully!"
 
 pre-commit: fmt vet lint test-unit
 	@echo ""
-	@echo "[SUCCESS] Pre-commit checks passed!"
+	@echo "✅ Pre-commit checks passed!"
 
 ci: lint test-race test-coverage
 	@echo ""
-	@echo "[SUCCESS] CI checks passed!"
+	@echo "✅ CI checks passed!"
 
 # ============================================================================
 # Development Workflow Targets
 # ============================================================================
 
-dev
+dev:
 	@echo "Starting development mode..."
 	@$(MAKE) build
 	@$(MAKE) run
 
-quick-test
+quick-test:
 	@echo "Running quick tests..."
 	@go test -short ./...
 
 full-test: clean-test test-coverage test-race
 	@echo ""
-	@echo "[SUCCESS] Full test suite completed!"
+	@echo "✅ Full test suite completed!"
 
 # ============================================================================
 # Benchmarking and Profiling
 # ============================================================================
 
-bench-compare
+bench-compare:
 	@echo "Running benchmarks..."
 	@go test -bench=. -benchmem ./... | tee bench-new.txt
 	@echo ""
 	@echo "Benchmark results saved to bench-new.txt"
 	@echo "To compare with previous run: benchcmp bench-old.txt bench-new.txt"
 
-profile-cpu
+profile-cpu:
 	@echo "Running tests with CPU profiling..."
 	@go test -cpuprofile=cpu.prof -bench=. ./...
 	@echo "CPU profile saved to cpu.prof"
 	@echo "View with: go tool pprof cpu.prof"
 
-profile-mem
+profile-mem:
 	@echo "Running tests with memory profiling..."
 	@go test -memprofile=mem.prof -bench=. ./...
 	@echo "Memory profile saved to mem.prof"
@@ -241,7 +242,7 @@ profile-mem
 # Documentation
 # ============================================================================
 
-docs
+docs:
 	@echo "Generating documentation..."
 	@godoc -http=:6060 &
 	@echo "Documentation server started at http://localhost:6060"
@@ -251,7 +252,7 @@ docs
 # Statistics and Reporting
 # ============================================================================
 
-stats
+stats:
 	@echo "Code Statistics:"
 	@echo "================"
 	@echo "Total Go files: $$(find . -name '*.go' | wc -l)"
@@ -277,34 +278,34 @@ test-summary: test-coverage
 # Verification Targets
 # ============================================================================
 
-verify-deps
+verify-deps:
 	@echo "Verifying dependencies..."
 	@go mod verify
-	@echo "[SUCCESS] Dependencies verified"
+	@echo "✅ Dependencies verified"
 
-verify-build
+verify-build:
 	@echo "Verifying build..."
 	@go build -v ./...
-	@echo "[SUCCESS] Build verification complete"
+	@echo "✅ Build verification complete"
 
 verify-all: verify-deps verify-build test-unit
 	@echo ""
-	@echo "[SUCCESS] All verifications passed!"
+	@echo "✅ All verifications passed!"
 
 # ============================================================================
 # Documentation Targets
 # ============================================================================
 
-swagger-validate
+swagger-validate:
 	@echo "Validating OpenAPI specification..."
 	@docker run --rm -v $(PWD):/workspace openapitools/openapi-generator-cli validate -i /workspace/api/swagger.json
 
-swagger-serve
+swagger-serve:
 	@echo "Starting Swagger UI server..."
 	@echo "Open http://localhost:8080/swagger in your browser"
 	@$(MAKE) run
 
-docs-gen
+docs-gen:
 	@echo "Generating API clients..."
 	@docker run --rm -v $(PWD):/workspace openapitools/openapi-generator-cli generate \
 		-i /workspace/api/swagger.json \
