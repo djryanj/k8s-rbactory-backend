@@ -35,12 +35,14 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
     go build \
     -a \
     -installsuffix cgo \
-    -ldflags="-w -s -extldflags '-static' -X main.Version=${VERSION:-dev} -X main.BuildTime=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+    -ldflags="-w -s -extldflags '-static' \
+    -X main.Version=${VERSION} \
+    -X main.BuildDate=${BUILD_DATE} \
+    -X main.GitCommit=${VCS_REF}" \
     -o api \
     ./cmd/api
 
-RUN file api && \
-    chmod +x api
+RUN chmod +x api
 
 # final stage
 FROM gcr.io/distroless/static-debian13:nonroot
