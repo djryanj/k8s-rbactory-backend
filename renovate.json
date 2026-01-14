@@ -1,0 +1,200 @@
+{
+    "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+    "extends": [
+        "config:recommended",
+        ":semanticCommits",
+        ":dependencyDashboard",
+        "group:monorepos",
+        "group:recommended",
+        "replacements:all",
+        "workarounds:all"
+    ],
+    "timezone": "America/Edmonton",
+    "schedule": [
+        "after 10pm every weekday",
+        "before 5am every weekday",
+        "every weekend"
+    ],
+    "labels": [
+        "dependencies",
+        "renovate"
+    ],
+    "assignees": [
+        "@djryanj"
+    ],
+    "reviewers": [
+        "@djryanj"
+    ],
+    "prConcurrentLimit": 5,
+    "prHourlyLimit": 2,
+    "rebaseWhen": "behind-base-branch",
+    "semanticCommits": "enabled",
+    "commitMessagePrefix": "chore(deps):",
+    "postUpdateOptions": [
+        "gomodTidy",
+        "gomodUpdateImportPaths"
+    ],
+    "vulnerabilityAlerts": {
+        "labels": [
+            "security"
+        ],
+        "assignees": [
+            "@security-team"
+        ],
+        "reviewers": [
+            "@security-team"
+        ]
+    },
+    "packageRules": [
+        {
+            "description": "Group Go minor and patch updates",
+            "matchDatasources": [
+                "go"
+            ],
+            "matchUpdateTypes": [
+                "minor",
+                "patch"
+            ],
+            "groupName": "Go dependencies (non-major)"
+        },
+        {
+            "description": "Separate Go major updates",
+            "matchDatasources": [
+                "go"
+            ],
+            "matchUpdateTypes": [
+                "major"
+            ],
+            "labels": [
+                "dependencies",
+                "major-update"
+            ],
+            "automerge": false
+        },
+        {
+            "description": "Group Kubernetes client libraries",
+            "groupName": "Kubernetes dependencies",
+            "matchPackagePrefixes": [
+                "k8s.io/api",
+                "k8s.io/apimachinery",
+                "k8s.io/client-go",
+                "sigs.k8s.io/controller-runtime"
+            ]
+        },
+        {
+            "description": "Group gRPC and protobuf",
+            "groupName": "gRPC ecosystem",
+            "matchPackagePatterns": [
+                "google.golang.org/grpc",
+                "google.golang.org/protobuf",
+                "github.com/grpc-ecosystem/"
+            ]
+        },
+        {
+            "description": "Group testing dependencies",
+            "groupName": "Testing libraries",
+            "matchPackagePatterns": [
+                "github.com/stretchr/testify",
+                "github.com/onsi/ginkgo",
+                "github.com/onsi/gomega",
+                "github.com/golang/mock"
+            ]
+        },
+        {
+            "description": "Automerge patch updates for indirect dependencies",
+            "matchDatasources": [
+                "go"
+            ],
+            "matchUpdateTypes": [
+                "patch"
+            ],
+            "matchDepTypes": [
+                "indirect"
+            ],
+            "automerge": true,
+            "automergeType": "pr",
+            "automergeStrategy": "squash"
+        },
+        {
+            "description": "Pin Docker base images with digests",
+            "matchDatasources": [
+                "docker"
+            ],
+            "matchPackagePatterns": [
+                "golang",
+                "alpine",
+                "scratch"
+            ],
+            "pinDigests": true
+        },
+        {
+            "description": "Go version updates in go.mod",
+            "matchManagers": [
+                "gomod"
+            ],
+            "matchDepTypes": [
+                "golang"
+            ],
+            "labels": [
+                "dependencies",
+                "golang-version"
+            ],
+            "automerge": false
+        },
+        {
+            "description": "Group AWS SDK updates",
+            "groupName": "AWS SDK",
+            "matchPackagePrefixes": [
+                "github.com/aws/aws-sdk-go"
+            ]
+        },
+        {
+            "description": "Separate database driver updates for testing",
+            "matchPackagePatterns": [
+                "github.com/lib/pq",
+                "github.com/go-sql-driver/mysql",
+                "gorm.io/driver/"
+            ],
+            "labels": [
+                "dependencies",
+                "database"
+            ],
+            "automerge": false
+        }
+    ],
+    "golang": {
+        "minimumReleaseAge": "3 days"
+    },
+    "stabilityDays": 3,
+    "prCreation": "not-pending",
+    "ignorePaths": [
+        "**/vendor/**",
+        "**/testdata/**"
+    ],
+    "customManagers": [
+        {
+            "customType": "regex",
+            "description": "Update Go version in Dockerfiles",
+            "fileMatch": [
+                "(^|/)Dockerfile$"
+            ],
+            "matchStrings": [
+                "FROM golang:(?<currentValue>.*?)(@(?<currentDigest>sha256:[a-f0-9]+))? as"
+            ],
+            "datasourceTemplate": "docker",
+            "depNameTemplate": "golang"
+        },
+        {
+            "customType": "regex",
+            "description": "Update Go version in GitHub Actions",
+            "fileMatch": [
+                "^\\.github/workflows/[^/]+\\.ya?ml$"
+            ],
+            "matchStrings": [
+                "go-version:\\s*['\"]?(?<currentValue>[^'\"\\s]+)['\"]?"
+            ],
+            "datasourceTemplate": "golang-version",
+            "depNameTemplate": "golang"
+        }
+    ]
+}
