@@ -1,28 +1,40 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: rbac-generator-api
-  namespace: default
+  name: k8s-rbactory-backend
+  namespace: k8s-rbactory
   labels:
-    app: rbac-generator-api
+    app: k8s-rbactory-backend
+  annotations:
+    app.kubernetes.io/priority: "best-effort"
+    app.kubernetes.io/sla: "none"
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
-      app: rbac-generator-api
+      app: k8s-rbactory-backend  
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
   template:
     metadata:
       labels:
-        app: rbac-generator-api
+        app: k8s-rbactory-backend
+      annotations:
+        cluster-autoscaler.kubernetes.io/safe-to-evict: "true"
     spec:
-      serviceAccountName: rbac-generator  # Use the service account
+      serviceAccountName: k8s-rbactory-reader
       securityContext:
         runAsNonRoot: true
-        runAsUser: 1000
-        fsGroup: 1000
+        runAsUser: 65532
+        fsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
       containers:
       - name: api
-        image: rbac-generator-api:latest
+        image: k8s-rbactory-backend:latest
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8080
@@ -31,15 +43,14 @@ spec:
         env:
         - name: PORT
           value: "8080"
-        - name: ALLOWED_ORIGINS
-          value: "https://your-frontend.example.com"
+        # - name: ALLOWED_ORIGINS
+        #   value: "https://your-frontend.example.com"
         resources:
           requests:
-            memory: "128Mi"
+            memory: "64Mi"
             cpu: "100m"
           limits:
-            memory: "512Mi"
-            cpu: "500m"
+            memory: "128Mi"
         livenessProbe:
           httpGet:
             path: /api/v1/healthz
@@ -56,9 +67,35 @@ spec:
           periodSeconds: 10
           timeoutSeconds: 3
           failureThreshold: 3
-        securityContext:
-          allowPrivilegeEscalation: false
-          readOnlyRootFilesystem: true
-          capabilities:
-            drop:
-            - ALL
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 65532
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
+      # Tolerate being scheduled on spot/preemptible nodes
+      tolerations:
+        - key: "node.kubernetes.io/not-ready"
+          operator: "Exists"
+          effect: "NoExecute"
+          tolerationSeconds: 30
+        - key: "node.kubernetes.io/unreachable"
+          operator: "Exists"
+          effect: "NoExecute"
+          tolerationSeconds: 30
+        - key: "spot"
+          operator: "Equal"
+          value: "true"
+          effect: "NoSchedule"
+        - key: "preemptible"
+          operator: "Equal"
+          value: "true"
+          effect: "NoSchedule"

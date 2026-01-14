@@ -1,0 +1,34 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+metadata:
+  name: k8s-rbactory-backend
+  annotations:
+    config.kubernetes.io/local-config: "true"
+
+namespace: k8s-rbactory
+
+commonLabels:
+  app.kubernetes.io/name: k8s-rbactory-backend
+  app.kubernetes.io/component: api-server
+  app.kubernetes.io/part-of: k8s-rbactory
+
+commonAnnotations:
+  app.kubernetes.io/managed-by: kustomize
+
+resources:
+  - clusterrolebinding.yaml
+  - clusterrole.yaml
+  - deployment.yaml
+  - namespace.yaml
+  - service.yaml
+  - serviceaccount.yaml
+
+images:
+  - name: k8s-rbactory-backend
+    newName: ghcr.io/djryanj/k8s-rbactory-backend
+    newTag: latest
+
+replicas:
+  - name: k8s-rbactory-backend
+    count: 1

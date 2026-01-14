@@ -1,0 +1,24 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: k8s-rbactory-backend
+  namespace: k8s-rbactory
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+spec:
+  ingressClassName: internal # set specifically to avoid accidental exposure
+  tls:
+    - hosts:
+        - api.k8s-rbactory.example.com
+      secretName: k8s-rbactory-backend-tls
+  rules:
+    - host: api.k8s-rbactory.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: k8s-rbactory-backend
+                port:
+                  name: http

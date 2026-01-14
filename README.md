@@ -104,7 +104,7 @@ The application follows a clean architecture pattern with clear separation of co
 - Kubernetes 1.24 or higher
 - kubectl access with cluster-admin privileges (for initial setup)
 
-## Installation
+## Deployment
 
 ### Local Development
 
@@ -112,7 +112,7 @@ The application follows a clean architecture pattern with clear separation of co
 
 ```bash
 git clone https://github.com/djryanj/k8s-rbactory-backend.git
-cd k8s-rbactory-backend/backend
+cd k8s-rbactory-backend
 ```
 
 2. Install dependencies:
@@ -148,29 +148,133 @@ make docker-build
 ```bash
 docker run -p 8080:8080 \
   -v ~/.kube/config:/root/.kube/config:ro \
-  rbac-generator-api:latest
+  k8s-rbactory-backend:latest
 ```
 
 ### Kubernetes Deployment
 
-1. Apply RBAC configuration:
+Deployment manifests are available in the [hack/k8s-manfiests](./hack/k8s-manifests/) directory. A `kustomization.yaml` file is provided for use with kustomize (recommended).
+
+#### Method 1: Direct from GitHub (Recommended for Quick Testing)
+
+Deploy directly from the GitHub repository without cloning:
 
 ```bash
-kubectl apply -f deploy/rbac.yaml
+kubectl apply -k github.com/djryanj/k8s-rbactory-backend/hack/k8s-manifests
 ```
 
-2. Deploy the application:
+#### Method 2: From Local Clone
+
+Clone the repository and deploy:
 
 ```bash
-kubectl apply -f deploy/deployment.yaml
+# Clone the repository
+git clone https://github.com/djryanj/k8s-rbactory-backend.git
+cd k8s-rbactory-backend
+
+# Deploy
+kubectl apply -k hack/k8s-manifests
 ```
 
-3. Verify the deployment:
+#### Method 3: Using Kustomize CLI
+
+For more control and to preview changes:
 
 ```bash
-kubectl get pods -l app=rbac-generator-api
-kubectl logs -l app=rbac-generator-api
+# Preview what will be deployed
+kustomize build hack/k8s-manifests
+
+# Deploy using kustomize
+kustomize build hack/k8s-manifests | kubectl apply -f -
 ```
+
+#### Method 4: Customize deployment using your own overlay
+
+Create a `kustomization.yaml` file that extends what's in GitHub:
+
+```yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - github.com/djryanj/k8s-rbactory-backend/hack/k8s-manifests?ref=v1.0.0
+
+# Override namespace
+namespace: my-custom-namespace
+
+# Add custom labels
+commonLabels:
+  team: my-team
+  cost-center: "12345"
+
+# Override image
+images:
+  - name: k8s-rbactory-backend
+    newName: my-registry.example.com/k8s-rbactory-backend
+    newTag: v2.0.0
+
+# Override replicas
+replicas:
+  - name: k8s-rbactory-backend
+    count: 5
+```
+
+Deploy that:
+
+```shell
+kubectl apply -k kustomization.yaml
+```
+
+#### Verify the deployment:
+
+```bash
+kubectl get pods -n k8s-rbactory -l app=k8s-rbactory-backend
+kubectl logs -n k8s-rbactory -l app=k8s-rbactory-backend
+```
+
+### Ingress
+
+A reference [ingress manifest](./hack/k8s-manifests/ingress.yaml) is provided in [hack/k8s-manifests](./hack/k8s-manifests/) for reference but it is **NOT** included in the provided `kustomization.yaml`.
+
+### Burstable By Default
+
+The [provided manifests](./hack/k8s-manifests/) deliberately put this deployment in the [burstable QoS class](https://kubernetes.io/docs/concepts/workloads/pods/pod-qos/#burstable) and some basic tolerations for spot instances. This is done under the assumption that this deployment is non-critical to most clusters.
+
+## Security Considerations
+
+### DO NOT EXPOSE PUBLICLY
+
+This service WILL expose information about your cluster(s) to unauthenticated users that could potentially be used in a malicious way. Therefore, **_DO NOT EXPOSE IT ON A PUBLICLY REACHABLE INGRESS/URL_**.
+
+The provided [ingress manifest](./hack/k8s-manifests/ingress.yaml) deliberately uses a nonstandard `ingressClassName` to help avoid accidentally exposing it on a default ingress.
+
+If your cluster is only reachable via a public Ingress, then use:
+
+```shell
+kubectl port-forward -n k8s-rbactory service/k8s-rbactory-backend 8080 8080
+```
+
+And update the API URL parameter in the frontend to `http://localhost:8080/v1/api`.
+
+### Service Account with Proper RBAC
+
+It would be ironic to use an RBAC tool without proper RBAC in place. So don't do that.
+
+The [provided manifests](./hack/k8s-manifests/) create and use a service account as well as minimal RBAC required for this deployment to get what's needed from the cluster in a read-only manner. Use them, or something like them, please.
+
+### CORS Configuration
+
+Configure allowed origins for production:
+
+```yaml
+env:
+  - name: ALLOWED_ORIGINS
+    value: "https://your-frontend.example.com"
+```
+
+### TLS/HTTPS
+
+For production deployments, use an ingress controller with TLS. See the [sample `ingress.yaml`](./hack/k8s-manifests/ingress.yaml).
 
 ## Configuration
 
@@ -179,7 +283,7 @@ The application is configured using environment variables:
 | Variable          | Description                                   | Default                 | Required |
 | ----------------- | --------------------------------------------- | ----------------------- | -------- |
 | `PORT`            | HTTP server port                              | `8080`                  | No       |
-| `ALLOWED_ORIGINS` | CORS allowed origins (comma-separated)        | `http://localhost:3000` | No       |
+| `ALLOWED_ORIGINS` | CORS allowed origins (comma-separated)        | `http://localhost:5713` | No       |
 | `KUBECONFIG`      | Path to kubeconfig file (out-of-cluster only) | `~/.kube/config`        | No       |
 
 ### Example Configuration
@@ -194,7 +298,7 @@ export ALLOWED_ORIGINS="https://app.example.com,https://admin.example.com"
 
 API documentation is available in swagger format at [api/swagger.json](api/swagger.json).
 
-When the server is running, it is browsable at `/swagger` (e.g., http://\<base-url\>/swagger)
+When the server is running, it is browsable at `/swagger` (e.g., https://\<base-url\>/swagger)
 
 ### Rate Limiting
 
@@ -313,82 +417,6 @@ This installs:
 - goimports
 - staticcheck
 
-## Deployment
-
-### RBAC Permissions
-
-The application requires the following Kubernetes RBAC permissions:
-
-```yaml
-rules:
-  # Read RBAC resources
-  - apiGroups: ["rbac.authorization.k8s.io"]
-    resources:
-      - roles
-      - clusterroles
-      - rolebindings
-      - clusterrolebindings
-    verbs: ["get", "list", "watch"]
-
-  # Read namespaces
-  - apiGroups: [""]
-    resources:
-      - namespaces
-    verbs: ["get", "list"]
-
-  # Read cluster version
-  - nonResourceURLs: ["/version"]
-    verbs: ["get"]
-```
-
-### Security Considerations
-
-#### In-Cluster Deployment
-
-1. **Service Account**: Use a dedicated service account with minimal permissions
-2. **Network Policies**: Restrict ingress/egress traffic
-3. **Pod Security**: Run as non-root user with read-only filesystem
-4. **Resource Limits**: Set appropriate CPU and memory limits
-
-#### CORS Configuration
-
-Configure allowed origins for production:
-
-```yaml
-env:
-  - name: ALLOWED_ORIGINS
-    value: "https://your-frontend.example.com"
-```
-
-#### TLS/HTTPS
-
-For production deployments, use an ingress controller with TLS:
-
-```yaml
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: rbac-generator-api
-  annotations:
-    cert-manager.io/cluster-issuer: "letsencrypt-prod"
-spec:
-  tls:
-    - hosts:
-        - api.example.com
-      secretName: rbac-api-tls
-  rules:
-    - host: api.example.com
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: rbac-generator-api
-                port:
-                  number: 80
-```
-
 ## Monitoring and Observability
 
 ### Logging
@@ -442,6 +470,10 @@ readinessProbe:
   initialDelaySeconds: 5
   periodSeconds: 10
 ```
+
+### Metrics
+
+At this time, no metrics are exposed as they are not deemed important enough for a small project like this. Feel free to contribute that functionality if you feel it's needed.
 
 ## Troubleshooting
 
@@ -509,44 +541,24 @@ export LOG_LEVEL=debug
 
 ```bash
 # View application logs
-kubectl logs -l app=rbac-generator-api --tail=100 -f
+kubectl logs -l app=k8s-rbactory-backend --tail=100 -f
 
 # View logs for specific pod
-kubectl logs rbac-generator-api-xxx-yyy -f
+kubectl logs k8s-rbactory-backend-xxx-yyy -f
 
 # View previous container logs
-kubectl logs rbac-generator-api-xxx-yyy --previous
+kubectl logs k8s-rbactory-backend-xxx-yyy --previous
 ```
+
+## Code of Conduct
+
+This project adheres to a Code of Conduct that all contributors are expected to follow. By participating, you are expected to uphold this code. Please report unacceptable behavior to [INSERT EMAIL ADDRESS].
+
+Please read our full [Code of Conduct](CODE_OF_CONDUCT.md) before contributing.
 
 ## Contributing
 
-Contributions are welcome! Please follow these guidelines:
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Make your changes
-4. Run tests (`make test`)
-5. Run linter (`make lint`)
-6. Commit your changes (`git commit -m 'Add amazing feature'`)
-7. Push to the branch (`git push origin feature/amazing-feature`)
-8. Open a Pull Request
-
-### Code Style
-
-- Follow standard Go conventions
-- Use `gofmt` for formatting
-- Write tests for new features
-- Update documentation as needed
-- Keep commits atomic and well-described
-
-### Testing Requirements
-
-All pull requests must:
-
-- Pass all existing tests
-- Include tests for new functionality
-- Maintain or improve code coverage
-- Pass linter checks
+See [CONTRIBUTING](CONTRIBUTING.md).
 
 ## License
 

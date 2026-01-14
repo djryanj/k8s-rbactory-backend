@@ -97,7 +97,7 @@ test-watch:
 
 check: test-unit test-race lint
 	@echo ""
-	@echo "✅ All checks passed!"
+	@echo "[SUCCESS] All checks passed!"
 
 coverage-badge: test-coverage
 	@echo -n "Coverage: "
@@ -188,15 +188,15 @@ install-tools:
 
 all: clean fmt vet lint test build
 	@echo ""
-	@echo "✅ All tasks completed successfully!"
+	@echo "[SUCCESS] All tasks completed successfully!"
 
 pre-commit: fmt vet lint test-unit
 	@echo ""
-	@echo "✅ Pre-commit checks passed!"
+	@echo "[SUCCESS] Pre-commit checks passed!"
 
 ci: lint test-race test-coverage
 	@echo ""
-	@echo "✅ CI checks passed!"
+	@echo "[SUCCESS] CI checks passed!"
 
 # ============================================================================
 # Development Workflow Targets
@@ -213,7 +213,7 @@ quick-test:
 
 full-test: clean-test test-coverage test-race
 	@echo ""
-	@echo "✅ Full test suite completed!"
+	@echo "[SUCCESS] Full test suite completed!"
 
 # ============================================================================
 # Benchmarking and Profiling
@@ -281,16 +281,16 @@ test-summary: test-coverage
 verify-deps:
 	@echo "Verifying dependencies..."
 	@go mod verify
-	@echo "✅ Dependencies verified"
+	@echo "[SUCCESS] Dependencies verified"
 
 verify-build:
 	@echo "Verifying build..."
 	@go build -v ./...
-	@echo "✅ Build verification complete"
+	@echo "[SUCCESS] Build verification complete"
 
 verify-all: verify-deps verify-build test-unit
 	@echo ""
-	@echo "✅ All verifications passed!"
+	@echo "[SUCCESS] All verifications passed!"
 
 # ============================================================================
 # Documentation Targets
