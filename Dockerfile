@@ -64,4 +64,4 @@ COPY --from=builder /app/api /api
 
 EXPOSE 8080
 
-ENTRYPOINT ["/api"]
+ENTRYPOINT ["./api"]
