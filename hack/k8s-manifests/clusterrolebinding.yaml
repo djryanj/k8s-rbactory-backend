@@ -8,5 +8,5 @@ roleRef:
   name: k8s-rbactory-reader
 subjects:
   - kind: ServiceAccount
-    name: k8s-rbactory
+    name: k8s-rbactory-reader
     namespace: k8s-rbactory
