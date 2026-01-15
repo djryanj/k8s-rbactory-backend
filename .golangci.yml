@@ -1,4 +1,5 @@
-# .golangci.yml - Linter configuration for Go 1.23
+version: "2"
+
 run:
   go: "1.25"
   timeout: 5m
@@ -23,20 +24,19 @@ linters:
     - gocyclo
     - revive
 
-linters-settings:
-  gocyclo:
-    min-complexity: 15
-  goconst:
-    min-len: 3
-    min-occurrences: 3
-  misspell:
-    locale: US
-  revive:
-    rules:
-      - name: exported
-        disabled: false
+  settings:
+    gocyclo:
+      min-complexity: 15
+    goconst:
+      min-len: 3
+      min-occurrences: 3
+    misspell:
+      locale: US
+    revive:
+      rules:
+        - name: exported
+          disabled: false
 
 issues:
-  exclude-use-default: false
   max-issues-per-linter: 0
   max-same-issues: 0
