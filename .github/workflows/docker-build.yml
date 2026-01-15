@@ -7,10 +7,32 @@ on:
       - dev
     tags:
       - 'v*'
+    paths-ignore:
+      - '**.md'
+      - 'hack/k8s-manifests/**'
+      - 'docs/**'
+      - '.github/**'
+      - '!.github/workflows/**'  # Don't ignore workflow files themselves
+      - 'LICENSE'
+      - '.gitignore'
+      - '.dockerignore'
+      - 'renovate.json'
+  
   pull_request:
     branches:
       - main
       - dev
+    paths-ignore:
+      - '**.md'
+      - 'hack/k8s-manifests/**'
+      - 'docs/**'
+      - '.github/**'
+      - '!.github/workflows/**'  # Don't ignore workflow files themselves
+      - 'LICENSE'
+      - '.gitignore'
+      - '.dockerignore'
+      - 'renovate.json'
+      
   workflow_dispatch:
 
 env:
