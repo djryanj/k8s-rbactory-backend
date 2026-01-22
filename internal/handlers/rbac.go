@@ -489,7 +489,7 @@ func (h *RBACHandler) GetCounts(w http.ResponseWriter, r *http.Request) {
 
 	// Create a wait group to ensure all goroutines complete
 	var wg sync.WaitGroup
-	results := make(chan countResult, 5)
+	results := make(chan countResult, 6)
 
 	// Helper to safely send results
 	sendResult := func(name string, count int, err error) {
@@ -608,6 +608,27 @@ func (h *RBACHandler) GetCounts(w http.ResponseWriter, r *http.Request) {
 		sendResult("principals", len(principalMap), nil)
 	}()
 
+	// Resources count
+	wg.Add(1)
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				logging.LogError(ctx, "panic in resources count", fmt.Errorf("%v", r))
+				sendResult("resources", 0, fmt.Errorf("panic: %v", r))
+			}
+		}()
+
+		// Count secrets as a representative resource type
+		secrets, err := h.k8sClient.ListSecrets(ctx, "")
+		count := 0
+		if err == nil {
+			count = len(secrets)
+		} else {
+			logging.LogError(ctx, "failed to count resources", err)
+		}
+		sendResult("resources", count, err)
+	}()
+
 	// Close results channel when all goroutines complete
 	go func() {
 		wg.Wait()
@@ -634,6 +655,8 @@ func (h *RBACHandler) GetCounts(w http.ResponseWriter, r *http.Request) {
 			counts.ClusterRoleBindings = result.count
 		case "principals":
 			counts.Principals = result.count
+		case "resources":
+			counts.Resources = result.count
 		}
 	}
 

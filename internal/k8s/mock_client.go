@@ -19,6 +19,52 @@ type MockClient struct {
 	ListNamespacesFunc          func(ctx context.Context) ([]string, error)
 	GetClusterVersionFunc       func(ctx context.Context) (string, error)
 	GetNodeCountFunc            func(ctx context.Context) (int, error)
+	// Resource fields
+	SecretsFunc      func(ctx context.Context, namespace string) ([]models.KubernetesResource, error)
+	ConfigMapsFunc   func(ctx context.Context, namespace string) ([]models.KubernetesResource, error)
+	PodsFunc         func(ctx context.Context, namespace string) ([]models.KubernetesResource, error)
+	ServicesFunc     func(ctx context.Context, namespace string) ([]models.KubernetesResource, error)
+	K8sResourcesFunc func(ctx context.Context, resourceType string, namespace string) ([]models.KubernetesResource, error)
+}
+
+// ListSecrets mock implementation
+func (m *MockClient) ListSecrets(ctx context.Context, namespace string) ([]models.KubernetesResource, error) {
+	if m.SecretsFunc != nil {
+		return m.SecretsFunc(ctx, namespace)
+	}
+	return []models.KubernetesResource{}, nil
+}
+
+// ListConfigMaps mock implementation
+func (m *MockClient) ListConfigMaps(ctx context.Context, namespace string) ([]models.KubernetesResource, error) {
+	if m.ConfigMapsFunc != nil {
+		return m.ConfigMapsFunc(ctx, namespace)
+	}
+	return []models.KubernetesResource{}, nil
+}
+
+// ListPods mock implementation
+func (m *MockClient) ListPods(ctx context.Context, namespace string) ([]models.KubernetesResource, error) {
+	if m.PodsFunc != nil {
+		return m.PodsFunc(ctx, namespace)
+	}
+	return []models.KubernetesResource{}, nil
+}
+
+// ListServices mock implementation
+func (m *MockClient) ListServices(ctx context.Context, namespace string) ([]models.KubernetesResource, error) {
+	if m.ServicesFunc != nil {
+		return m.ServicesFunc(ctx, namespace)
+	}
+	return []models.KubernetesResource{}, nil
+}
+
+// ListKubernetesResources mock implementation
+func (m *MockClient) ListKubernetesResources(ctx context.Context, resourceType string, namespace string) ([]models.KubernetesResource, error) {
+	if m.K8sResourcesFunc != nil {
+		return m.K8sResourcesFunc(ctx, resourceType, namespace)
+	}
+	return []models.KubernetesResource{}, nil
 }
 
 // Ensure MockClient implements ClientInterface at compile time

@@ -1,4 +1,4 @@
-// backend/cmd/api/main.go (updated middleware chain)
+// backend/cmd/api/main.go
 package main
 
 import (
@@ -35,7 +35,7 @@ func main() {
 	// Initialize handlers
 	rbacHandler := handlers.NewRBACHandler(k8sClient, logger)
 	clusterHandler := handlers.NewClusterHandler(k8sClient, logger)
-
+	resourceHandler := handlers.NewResourceHandler(k8sClient, logger) //
 	// Setup router
 	r := mux.NewRouter()
 
@@ -71,6 +71,12 @@ func main() {
 	api.HandleFunc("/relationships/{kind}/{namespace}/{name}", rbacHandler.GetRelationships).Methods(http.MethodGet)
 	api.HandleFunc("/relationships/{kind}/{name}", rbacHandler.GetRelationships).Methods(http.MethodGet)
 	api.HandleFunc("/principals", rbacHandler.ListPrincipals).Methods(http.MethodGet)
+
+	// Kubernetes Resource routes
+	api.HandleFunc("/resources", resourceHandler.ListKubernetesResources).Methods(http.MethodGet)
+	api.HandleFunc("/resources/types", resourceHandler.ListResourceTypes).Methods(http.MethodGet)
+	api.HandleFunc("/resources/{type}/{namespace}/{name}/access", resourceHandler.GetResourceAccess).Methods(http.MethodGet)
+	api.HandleFunc("/resources/{type}/{name}/access", resourceHandler.GetResourceAccess).Methods(http.MethodGet)
 
 	// Apply middleware in order
 	handler := middleware.Recovery(logger)(r)                     // 1. Catch panics

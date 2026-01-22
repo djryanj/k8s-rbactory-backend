@@ -20,8 +20,14 @@ type ClientInterface interface {
 	// Cluster operations
 	ListNamespaces(ctx context.Context) ([]string, error)
 	GetClusterVersion(ctx context.Context) (string, error)
-
 	GetNodeCount(ctx context.Context) (int, error)
+
+	// Resource operations
+	ListKubernetesResources(ctx context.Context, resourceType string, namespace string) ([]models.KubernetesResource, error)
+	ListSecrets(ctx context.Context, namespace string) ([]models.KubernetesResource, error)
+	ListConfigMaps(ctx context.Context, namespace string) ([]models.KubernetesResource, error)
+	ListPods(ctx context.Context, namespace string) ([]models.KubernetesResource, error)
+	ListServices(ctx context.Context, namespace string) ([]models.KubernetesResource, error)
 }
 
 // Ensure Client implements ClientInterface

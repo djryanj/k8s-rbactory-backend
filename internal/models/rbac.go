@@ -1,4 +1,4 @@
-// backend/internal/models/rbac.go
+// internal/models/rbac.go
 package models
 
 // RBACResource represents a complete RBAC configuration
@@ -71,6 +71,7 @@ type ResourceCounts struct {
 	RoleBindings        int `json:"roleBindings"`
 	ClusterRoleBindings int `json:"clusterRoleBindings"`
 	Principals          int `json:"principals"`
+	Resources           int `json:"resources"` // Add this field
 }
 
 // RelationshipResponse contains complete relationship data for visualization
