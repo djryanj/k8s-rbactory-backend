@@ -19,6 +19,8 @@ rules:
   - apiGroups: [""]
     resources:
       - nodes
+      - secrets
+      - configmaps
     verbs: ["list"]
   
   - nonResourceURLs: ["/version"]
