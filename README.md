@@ -197,7 +197,7 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 resources:
-  - github.com/djryanj/k8s-rbactory-backend/hack/k8s-manifests?ref=v1.0.0
+  - github.com/djryanj/k8s-rbactory-backend/hack/k8s-manifests
 
 # Override namespace
 namespace: my-custom-namespace
@@ -217,6 +217,18 @@ images:
 replicas:
   - name: k8s-rbactory-backend
     count: 5
+
+# patch the backend for CORS
+patches:
+  - target:
+      kind: Deployment
+      name: k8s-rbactory-backend
+    patch: |-
+      - op: add
+        path: /spec/template/spec/containers/0/env/-
+        value:
+          name: ALLOWED_ORIGINS
+          value: "http://localhost:5173"
 ```
 
 Deploy that:
