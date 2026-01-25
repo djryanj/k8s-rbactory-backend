@@ -1,3 +1,4 @@
+// compression.go
 package middleware
 
 import (
@@ -7,6 +8,12 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+)
+
+const (
+	// DefaultMinCompressionSize is the minimum response size (in bytes) that will be compressed
+	// Responses smaller than this are sent uncompressed as the overhead isn't worth it
+	DefaultMinCompressionSize = 1024 // 1KB
 )
 
 // gzipResponseWriter wraps http.ResponseWriter to support gzip compression
@@ -46,44 +53,10 @@ var gzipWriterPool = sync.Pool{
 }
 
 // Compression returns a middleware that compresses HTTP responses using gzip
-// when the client supports it and the response is compressible
+// when the client supports it and the response is compressible.
+// Uses a default minimum size of 1KB - responses smaller than this are not compressed.
 func Compression(logger *slog.Logger) func(http.Handler) http.Handler {
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			// Check if client accepts gzip encoding
-			if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
-				next.ServeHTTP(w, r)
-				return
-			}
-
-			// Get a gzip writer from the pool
-			gz := gzipWriterPool.Get().(*gzip.Writer)
-			defer gzipWriterPool.Put(gz)
-
-			gz.Reset(w)
-			defer func() {
-				if err := gz.Close(); err != nil {
-					logger.Error("Failed to close gzip writer", "error", err)
-				}
-			}()
-
-			// Set the appropriate headers
-			w.Header().Set("Content-Encoding", "gzip")
-			w.Header().Set("Vary", "Accept-Encoding")
-
-			// Remove Content-Length header as it will be incorrect after compression
-			w.Header().Del("Content-Length")
-
-			// Wrap the response writer
-			gzw := &gzipResponseWriter{
-				Writer:         gz,
-				ResponseWriter: w,
-			}
-
-			// Call the next handler with the wrapped writer
-			next.ServeHTTP(gzw, r)
-		})
-	}
+	return CompressionWithMinSize(logger, DefaultMinCompressionSize)
 }
 
 // CompressionWithMinSize returns a middleware that only compresses responses

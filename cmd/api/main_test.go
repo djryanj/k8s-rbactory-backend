@@ -157,7 +157,7 @@ func TestMain_EnvironmentVariables(t *testing.T) {
 		{
 			name:         "ALLOWED_ORIGINS",
 			envVar:       "ALLOWED_ORIGINS",
-			defaultValue: "http://localhost:3000",
+			defaultValue: "http://localhost:5173",
 		},
 	}
 

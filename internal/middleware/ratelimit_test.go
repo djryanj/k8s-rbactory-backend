@@ -2,6 +2,7 @@
 package middleware
 
 import (
+	"fmt"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
@@ -92,5 +93,94 @@ func TestRateLimit_DifferentIPs(t *testing.T) {
 
 	if rr3.Code != http.StatusTooManyRequests {
 		t.Errorf("IP1 second request: expected 429, got %d", rr3.Code)
+	}
+}
+
+func TestRateLimit_Cleanup(t *testing.T) {
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
+	middleware := RateLimit(logger, 10, 10)
+	wrappedHandler := middleware(handler)
+
+	// Make requests from many different IPs
+	for i := 0; i < 100; i++ {
+		req := httptest.NewRequest("GET", "/test", nil)
+		req.RemoteAddr = fmt.Sprintf("192.168.1.%d:12345", i)
+		rr := httptest.NewRecorder()
+		wrappedHandler.ServeHTTP(rr, req)
+	}
+
+	// The cleanup should happen automatically
+	// This test mainly ensures no panics occur
+}
+
+func TestRateLimit_BurstAllowance(t *testing.T) {
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
+	// Rate: 1 request per second, Burst: 3
+	middleware := RateLimit(logger, 1, 3)
+	wrappedHandler := middleware(handler)
+
+	// First 3 requests should succeed (burst)
+	for i := 0; i < 3; i++ {
+		req := httptest.NewRequest("GET", "/test", nil)
+		req.RemoteAddr = "192.168.1.1:12345"
+		rr := httptest.NewRecorder()
+		wrappedHandler.ServeHTTP(rr, req)
+
+		if rr.Code != http.StatusOK {
+			t.Errorf("burst request %d: expected 200, got %d", i+1, rr.Code)
+		}
+	}
+
+	// 4th request should be rate limited
+	req := httptest.NewRequest("GET", "/test", nil)
+	req.RemoteAddr = "192.168.1.1:12345"
+	rr := httptest.NewRecorder()
+	wrappedHandler.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusTooManyRequests {
+		t.Errorf("expected 429 after burst, got %d", rr.Code)
+	}
+}
+
+func TestRateLimit_XForwardedFor(t *testing.T) {
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
+	middleware := RateLimit(logger, 1, 1)
+	wrappedHandler := middleware(handler)
+
+	// First request with X-Forwarded-For
+	req1 := httptest.NewRequest("GET", "/test", nil)
+	req1.RemoteAddr = "192.168.1.100:12345"
+	req1.Header.Set("X-Forwarded-For", "10.0.0.1")
+	rr1 := httptest.NewRecorder()
+	wrappedHandler.ServeHTTP(rr1, req1)
+
+	if rr1.Code != http.StatusOK {
+		t.Errorf("first request: expected 200, got %d", rr1.Code)
+	}
+
+	// Second request with same X-Forwarded-For should be rate limited
+	req2 := httptest.NewRequest("GET", "/test", nil)
+	req2.RemoteAddr = "192.168.1.200:12345"        // Different RemoteAddr
+	req2.Header.Set("X-Forwarded-For", "10.0.0.1") // Same X-Forwarded-For
+	rr2 := httptest.NewRecorder()
+	wrappedHandler.ServeHTTP(rr2, req2)
+
+	if rr2.Code != http.StatusTooManyRequests {
+		t.Errorf("second request: expected 429, got %d", rr2.Code)
 	}
 }

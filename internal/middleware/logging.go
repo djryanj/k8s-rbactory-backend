@@ -67,6 +67,9 @@ func Logging(logger *slog.Logger) func(http.Handler) http.Handler {
 			requestID := logging.GetRequestID(r.Context())
 			requestLogger := logging.NewRequestLogger(logger, requestID, r.Method, r.URL.Path)
 
+			// Add request ID to response headers for client tracking
+			wrapped.Header().Set("X-Request-ID", requestID)
+
 			// Add logger to context for downstream handlers
 			ctx := logging.WithLogger(r.Context(), requestLogger)
 

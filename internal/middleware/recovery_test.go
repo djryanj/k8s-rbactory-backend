@@ -2,6 +2,7 @@
 package middleware
 
 import (
+	"errors"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
@@ -310,5 +311,74 @@ func BenchmarkRecovery_WithPanic(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		rr := httptest.NewRecorder()
 		wrappedHandler.ServeHTTP(rr, req)
+	}
+}
+
+func TestRecovery_PanicWithDifferentTypes(t *testing.T) {
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+
+	tests := []struct {
+		name      string
+		panicWith interface{}
+	}{
+		{"panic with string", "panic message"},
+		{"panic with int", 42},
+		{"panic with error", errors.New("error message")},
+		{"panic with nil", nil},
+		{"panic with struct", struct{ msg string }{"panic"}},
+		{"panic with slice", []string{"a", "b"}},
+		{"panic with map", map[string]string{"key": "value"}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				panic(tt.panicWith)
+			})
+
+			middleware := Recovery(logger)
+			wrappedHandler := middleware(handler)
+
+			req := httptest.NewRequest("GET", "/test", nil)
+			rr := httptest.NewRecorder()
+
+			// Should not panic
+			wrappedHandler.ServeHTTP(rr, req)
+
+			if rr.Code != http.StatusInternalServerError {
+				t.Errorf("expected status 500, got %d", rr.Code)
+			}
+		})
+	}
+}
+
+func TestRecovery_NoPanic(t *testing.T) {
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+
+	callCount := 0
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		callCount++
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("success"))
+	})
+
+	middleware := Recovery(logger)
+	wrappedHandler := middleware(handler)
+
+	req := httptest.NewRequest("GET", "/test", nil)
+	rr := httptest.NewRecorder()
+
+	wrappedHandler.ServeHTTP(rr, req)
+
+	if callCount != 1 {
+		t.Errorf("expected handler to be called once, got %d", callCount)
+	}
+
+	if rr.Code != http.StatusOK {
+		t.Errorf("expected status 200, got %d", rr.Code)
+	}
+
+	if rr.Body.String() != "success" {
+		t.Errorf("expected body 'success', got %s", rr.Body.String())
 	}
 }
