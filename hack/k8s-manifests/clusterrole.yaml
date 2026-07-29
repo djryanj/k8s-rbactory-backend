@@ -19,7 +19,7 @@ rules:
   - apiGroups: [""]
     resources:
       - nodes
-      - secrets
+      # - secrets # removed because of security audit on cluster for yycdancewearforsale.com; needs rethinking.
       - configmaps
     verbs: ["list"]
   
